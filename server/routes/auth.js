@@ -19,7 +19,8 @@ router.post('/register', async(req, res) => {
             email,
             password: hashedPassword
         });
-        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+        const jwtSecret = process.env.JWT_SECRET || 'hangout_secret_fallback_key';
+        const token = jwt.sign({ id: user._id }, jwtSecret, { expiresIn: '7d' });
         res.status(201).json({
             token,
             user: { id: user._id, name: user.name, username: user.username, email: user.email, avatar: user.avatar, status: user.status }
@@ -37,7 +38,8 @@ router.post('/login', async(req, res) => {
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
         await User.findByIdAndUpdate(user._id, { status: 'online' });
-        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+        const jwtSecret = process.env.JWT_SECRET || 'hangout_secret_fallback_key';
+        const token = jwt.sign({ id: user._id }, jwtSecret, { expiresIn: '7d' });
         res.json({
             token,
             user: { id: user._id, name: user.name, username: user.username, email: user.email, avatar: user.avatar, status: 'online' }
