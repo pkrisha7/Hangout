@@ -1,0 +1,44 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: #f5f4ff;
+    color: #1a1a2e;
+    -webkit-font-smoothing: antialiased;
+}
+
+input:focus {
+    outline: none;
+    border-color: #6C63FF !important;
+    box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.12) !important;
+}
+
+button {
+    transition: transform 0.1s ease, opacity 0.1s ease;
+}
+
+button:active {
+    transform: scale(0.97);
+}
+
+::-webkit-scrollbar {
+    width: 5px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #d0cffe;
+    border-radius: 10px;
+}
+
+a {
+    transition: opacity 0.15s ease;
+}
