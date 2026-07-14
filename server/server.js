@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const http = require('http');
+const path = require('path');
 const { Server } = require('socket.io');
 require('dotenv').config();
 
@@ -15,11 +16,18 @@ const io = new Server(server, {
 app.use(cors());
 app.use(express.json());
 
+// Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/friends', require('./routes/friends'));
+app.use('/api/messages', require('./routes/messages'));
 
-app.get('/', (req, res) => {
-    res.json({ message: 'Hangout API is running' });
+// Serve Static Frontend Files
+app.use(express.static(path.join(__dirname, '../client')));
+
+// SPA Wildcard Route
+app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) return next();
+    res.sendFile(path.join(__dirname, '../client/index.html'));
 });
 
 const onlineUsers = new Map(); // userId -> socketId
@@ -112,6 +120,21 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('watch_chat_send', ({ roomId, text, sender }) => {
+        io.to(roomId).emit('watch_chat_receive', { text, sender });
+    });
+
+    socket.on('watch_room_refresh', () => {
+        // Find which room this socket is in
+        for (const [roomId, room] of watchRooms.entries()) {
+            const member = room.members.find(m => m.id === socket.id);
+            if (member) {
+                socket.emit('watch_room_state', room);
+                break;
+            }
+        }
+    });
+
     // Host pushes playlist to all guests
     socket.on('watch_playlist_update', ({ roomId, playlist }) => {
         const room = watchRooms.get(roomId);
@@ -168,11 +191,20 @@ io.on('connection', (socket) => {
     });
 
     // ── Sudoku multiplayer ────────────────────────────────────────────────
-    socket.on('sudoku_cell_change', ({ roomId, row, col, value }) => {
+    socket.on('sudoku_cell_change', ({ roomId, row, col, value, notes }) => {
         const room = watchRooms.get(roomId);
         if (!room || !room.sudokuBoard) return;
-        room.sudokuBoard[row][col] = value;
-        socket.to(roomId).emit('sudoku_cell_updated', { row, col, value });
+        
+        if (room.sudokuBoard.current) {
+            room.sudokuBoard.current[row][col] = value;
+        }
+        
+        if (!room.sudokuBoard.notes) {
+            room.sudokuBoard.notes = Array(6).fill(null).map(() => Array(6).fill(null).map(() => []));
+        }
+        room.sudokuBoard.notes[row][col] = notes || [];
+
+        socket.to(roomId).emit('sudoku_cell_updated', { row, col, value, notes });
     });
 
     socket.on('sudoku_init', ({ roomId, board }) => {

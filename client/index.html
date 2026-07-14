@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hangout - Watch, Call, Play Together</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/css/style.css">
+    <!-- Socket.io -->
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+
+    <!-- ========================================== -->
+    <!--           TOAST NOTIFICATION CONTAINER     -->
+    <!-- ========================================== -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- ========================================== -->
+    <!--            NOTIFICATION DRAWER             -->
+    <!-- ========================================== -->
+    <div id="notification-drawer" class="notification-drawer">
+        <div class="drawer-header">
+            <h3><i class="fa-solid fa-bell"></i> Notifications</h3>
+            <button id="close-drawer-btn" class="icon-btn"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div id="notification-list" class="drawer-body">
+            <!-- Dynamic notifications go here -->
+            <div class="empty-state">No new notifications</div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!--               AUTH SCREEN                  -->
+    <!-- ========================================== -->
+    <div id="auth-screen" class="auth-screen">
+        <div class="auth-card glass">
+            <div class="auth-logo">
+                <span class="logo-icon"><i class="fa-solid fa-ghost"></i></span>
+                <h1>hangout</h1>
+                <p>Watch, call, and play together</p>
+            </div>
+            
+            <div class="auth-tabs">
+                <button id="tab-login" class="auth-tab active">Log In</button>
+                <button id="tab-register" class="auth-tab">Register</button>
+            </div>
+
+            <!-- Login Form -->
+            <form id="login-form" class="auth-form active">
+                <div class="input-group">
+                    <label for="login-email">Email Address</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-envelope input-icon"></i>
+                        <input type="email" id="login-email" required placeholder="name@example.com">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="login-password">Password</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-lock input-icon"></i>
+                        <input type="password" id="login-password" required placeholder="••••••••">
+                    </div>
+                </div>
+                <button type="submit" class="btn primary-btn btn-full">Enter Hangout</button>
+            </form>
+
+            <!-- Register Form -->
+            <form id="register-form" class="auth-form">
+                <div class="input-group">
+                    <label for="reg-name">Full Name</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-user input-icon"></i>
+                        <input type="text" id="reg-name" required placeholder="Alex Mercer">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="reg-username">Username</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-at input-icon"></i>
+                        <input type="text" id="reg-username" required placeholder="alexm">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="reg-email">Email Address</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-envelope input-icon"></i>
+                        <input type="email" id="reg-email" required placeholder="name@example.com">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="reg-password">Password</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-lock input-icon"></i>
+                        <input type="password" id="reg-password" required placeholder="••••••••">
+                    </div>
+                </div>
+                <button type="submit" class="btn primary-btn btn-full">Create Account</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!--            APP CONTAINER (MAIN)            -->
+    <!-- ========================================== -->
+    <div id="app-container" class="app-container hidden">
+        
+        <!-- INSTAGRAM-STYLE NAV SIDEBAR -->
+        <nav class="nav-sidebar">
+            <div class="nav-logo">
+                <span class="logo-font text-glow">hangout</span>
+            </div>
+            
+            <ul class="nav-links">
+                <li id="nav-item-user" class="nav-item">
+                    <div class="nav-avatar-wrapper">
+                        <img id="nav-user-avatar" src="https://api.dicebear.com/7.x/adventurer/svg" alt="Avatar">
+                    </div>
+                    <span>User</span>
+                </li>
+                <li id="toggle-notifications-btn" class="nav-item">
+                    <i class="fa-solid fa-bell"></i>
+                    <span>Notif</span>
+                    <span id="notification-badge" class="badge hidden">0</span>
+                </li>
+                <li id="nav-item-friends" class="nav-item active">
+                    <i class="fa-solid fa-users"></i>
+                    <span>Friends</span>
+                </li>
+                <li id="nav-item-history" class="nav-item">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span>Room History</span>
+                </li>
+                <li id="nav-item-games" class="nav-item">
+                    <i class="fa-solid fa-gamepad"></i>
+                    <span>Games</span>
+                </li>
+                <li id="nav-item-settings" class="nav-item">
+                    <i class="fa-solid fa-gear"></i>
+                    <span>Settings</span>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- NAV PANELS CONTAINER (Secondary sidebar detail panels) -->
+        <div id="nav-panels-container" class="nav-panels-container">
+            
+            <!-- User Panel -->
+            <div id="panel-user" class="nav-panel">
+                <h3>My Profile</h3>
+                <div class="profile-info-card">
+                    <div class="avatar-wrapper online">
+                        <img id="user-avatar" src="https://api.dicebear.com/7.x/adventurer/svg?seed=hangout" alt="Avatar">
+                    </div>
+                    <div class="profile-details">
+                        <h4 id="user-fullname">Loading...</h4>
+                        <span id="user-username">@username</span>
+                    </div>
+                </div>
+                <div class="status-message-editor">
+                    <label>Set Status</label>
+                    <div class="input-row">
+                        <input type="text" id="status-message-input" placeholder="What's on your mind?" maxlength="50">
+                        <button id="save-status-btn" class="icon-btn"><i class="fa-solid fa-check"></i></button>
+                    </div>
+                </div>
+                <div class="logout-wrapper">
+                    <button id="logout-btn" class="btn text-danger-btn btn-full"><i class="fa-solid fa-right-from-bracket"></i> Log Out</button>
+                </div>
+            </div>
+
+            <!-- Notifications Panel -->
+            <div id="notification-drawer" class="nav-panel">
+                <div class="panel-header-row">
+                    <h3>Notifications</h3>
+                    <button id="close-drawer-btn" class="hidden"></button>
+                </div>
+                <div id="notification-list" class="drawer-body">
+                    <div class="empty-state">No new notifications</div>
+                </div>
+            </div>
+
+            <!-- Friends & Invites Panel -->
+            <div id="panel-friends" class="nav-panel active">
+                <div class="panel-header">
+                    <h3>Friends</h3>
+                    <div class="sidebar-tabs">
+                        <button id="sidebar-tab-friends" class="tab-btn active"><i class="fa-solid fa-users"></i> List</button>
+                        <button id="sidebar-tab-requests" class="tab-btn"><i class="fa-solid fa-user-plus"></i> Requests <span id="invite-badge" class="badge hidden">0</span></button>
+                    </div>
+                </div>
+                
+                <!-- List view -->
+                <div id="friends-panel" class="sidebar-panel active">
+                    <div class="search-bar">
+                        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                        <input type="text" id="friend-search-input" placeholder="Search users to add...">
+                        <div id="search-results" class="search-results hidden"></div>
+                    </div>
+                    <div id="friends-list" class="friends-list">
+                        <div class="empty-state">No friends yet. Add some above!</div>
+                    </div>
+                </div>
+
+                <!-- Invites view -->
+                <div id="requests-panel" class="sidebar-panel">
+                    <div id="friend-requests-list" class="requests-list">
+                        <div class="empty-state">No pending requests</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Room History Panel -->
+            <div id="panel-history" class="nav-panel">
+                <h3>Room History</h3>
+                <div id="history-list" class="history-list">
+                    <div class="empty-state">No room history in this session.</div>
+                </div>
+            </div>
+
+            <!-- Solo Games Panel -->
+            <div id="panel-games" class="nav-panel">
+                <h3>Play Solo</h3>
+                <p class="games-panel-subtitle">Play games on your own while waiting for friends</p>
+                <div class="solo-games-list">
+                    <button id="play-solo-ttt" class="btn secondary-btn btn-full"><i class="fa-solid fa-circle-xmark"></i> Tic-Tac-Toe vs AI</button>
+                    <button id="play-solo-sudoku" class="btn secondary-btn btn-full"><i class="fa-solid fa-border-all"></i> Sudoku Solo</button>
+                </div>
+            </div>
+
+            <!-- Settings Panel -->
+            <div id="panel-settings" class="nav-panel">
+                <h3>Settings</h3>
+                <div class="settings-list">
+                    <div class="settings-item">
+                        <span>Audio Tones</span>
+                        <input type="checkbox" id="setting-tones" checked>
+                    </div>
+                    <div class="settings-item">
+                        <span>Status Visibility</span>
+                        <input type="checkbox" id="setting-visibility" checked>
+                    </div>
+                    <div class="settings-item about-info">
+                        <strong>About Hangout</strong>
+                        <p>Version 2.0.0 (Instagram Edition)</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- MAIN CONTENT AREA (CENTER) -->
+        <main class="main-content">
+            
+            <!-- VIEW: DASHBOARD (Default view) -->
+            <section id="dashboard-view" class="view-panel active">
+                <div class="dashboard-hero">
+                    <h2>Welcome back to <span class="text-glow logo-font">hangout</span></h2>
+                    <p>Hangout is the ultimate place to watch YouTube videos, make calls, and play multiplayer games together in real-time.</p>
+                </div>
+
+                <div class="dashboard-grid">
+                    <!-- Create & Join Room -->
+                    <div class="dashboard-card glass">
+                        <h3><i class="fa-solid fa-person-shelter icon-primary"></i> Rooms</h3>
+                        <p>Create a Watch2Gether room to invite friends, watch synchronized videos, play games, and voice/video call.</p>
+                        
+                        <div class="room-actions">
+                            <button id="create-room-btn" class="btn primary-btn btn-full"><i class="fa-solid fa-plus"></i> Create New Room</button>
+                            
+                            <div class="divider"><span>OR</span></div>
+                            
+                            <div class="join-input-group">
+                                <input type="text" id="join-room-id" placeholder="Enter Room Code (e.g., ab12cd34)">
+                                <button id="join-room-btn" class="btn secondary-btn">Join Room</button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Active DM Chat Area (floating or centered when active) -->
+                <div id="direct-chat-wrapper" class="direct-chat-wrapper glass hidden">
+                    <div class="chat-header">
+                        <div class="chat-user-info">
+                            <img id="chat-user-avatar" src="https://api.dicebear.com/7.x/adventurer/svg" alt="Avatar">
+                            <div>
+                                <h4 id="chat-user-name">Friend Chat</h4>
+                                <span id="chat-user-status" class="status-text">offline</span>
+                            </div>
+                        </div>
+                        <div class="chat-actions">
+                            <button id="chat-call-audio" class="icon-btn success-hover" title="Voice Call"><i class="fa-solid fa-phone"></i></button>
+                            <button id="chat-call-video" class="icon-btn info-hover" title="Video Call"><i class="fa-solid fa-video"></i></button>
+                            <button id="chat-close" class="icon-btn"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                    </div>
+                    <div id="chat-messages" class="chat-messages">
+                        <!-- Messages go here -->
+                    </div>
+                    <form id="chat-input-form" class="chat-input-form">
+                        <input type="text" id="chat-message-input" autocomplete="off" placeholder="Type a message...">
+                        <button type="submit" class="send-btn"><i class="fa-solid fa-paper-plane"></i></button>
+                    </form>
+                </div>
+
+                <!-- Solo Game Container overlay -->
+                <div id="solo-game-overlay" class="solo-game-overlay glass hidden">
+                    <div class="overlay-header">
+                        <h3 id="solo-game-title">Game Title</h3>
+                        <button id="close-solo-game" class="icon-btn"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <div id="solo-game-body" class="overlay-body">
+                        <!-- Tic-Tac-Toe and Sudoku UI goes here dynamically -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW: WATCH PARTY ROOM (Active room view) -->
+            <section id="room-view" class="view-panel hidden">
+                <div class="room-top-bar glass">
+                    <div class="room-info">
+                        <button id="leave-room-btn" class="btn text-danger-btn"><i class="fa-solid fa-door-open"></i> Leave</button>
+                        <h2>Room: <span id="room-id-display">XXXX</span></h2>
+                        <button id="copy-room-link" class="btn secondary-btn sm-btn"><i class="fa-solid fa-copy"></i> Copy Code</button>
+                        <div id="room-participants-bar" class="room-participants-bar"></div>
+                    </div>
+                    <!-- Quick Call Toggle Buttons in Room -->
+                    <div class="room-call-quick-toggles">
+                        <button id="room-join-audio-call" class="btn room-call-btn" title="Join voice call"><i class="fa-solid fa-phone"></i> Join Voice</button>
+                        <button id="room-join-video-call" class="btn room-call-btn primary-btn" title="Join video call"><i class="fa-solid fa-video"></i> Join Video</button>
+                    </div>
+                </div>
+
+                <div class="room-layout">
+                    <!-- Left: Sync Video Section -->
+                    <div class="room-main">
+                        <!-- Video Search & Add -->
+                        <div class="video-controls glass">
+                            <form id="add-video-form">
+                                <i class="fa-solid fa-youtube youtube-input-icon"></i>
+                                <input type="text" id="youtube-url-input" required placeholder="Paste YouTube link or Video ID (e.g., https://www.youtube.com/watch?v=dQw4w9WgXcQ)">
+                                <button type="submit" class="btn primary-btn">Add Video</button>
+                            </form>
+                        </div>
+
+                        <!-- Main Video Player -->
+                        <div class="player-container glass">
+                            <!-- Custom YouTube Player wrapper -->
+                            <div id="yt-player-placeholder"></div>
+                            <div id="host-only-banner" class="host-only-banner hidden">
+                                <i class="fa-solid fa-crown"></i> Syncing to host's player state
+                            </div>
+                        </div>
+
+                        <!-- Playlist Management -->
+                        <div class="playlist-section glass">
+                            <h3><i class="fa-solid fa-list-ul"></i> Playlist Queue</h3>
+                            <div id="playlist-queue" class="playlist-queue">
+                                <!-- Dynamic playlist items -->
+                                <div class="empty-state">No videos in queue. Paste a URL above to add one!</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Room Sidebar (Tabs) -->
+                    <div class="room-sidebar glass">
+                        <div class="room-tabs">
+                            <button id="room-tab-chat" class="room-tab-btn active" title="Room Chat"><i class="fa-solid fa-comments"></i></button>
+                            <button id="room-tab-members" class="room-tab-btn" title="Members"><i class="fa-solid fa-users-rectangle"></i></button>
+                            <button id="room-tab-games" class="room-tab-btn" title="Play Games"><i class="fa-solid fa-gamepad"></i></button>
+                        </div>
+
+                        <!-- Room Chat Tab -->
+                        <div id="room-chat-panel" class="room-panel active">
+                            <div id="room-chat-messages" class="room-chat-messages">
+                                <!-- Messages -->
+                            </div>
+                            <form id="room-chat-form" class="room-chat-form">
+                                <input type="text" id="room-chat-input" autocomplete="off" placeholder="Message the room...">
+                                <button type="submit" class="send-btn"><i class="fa-solid fa-paper-plane"></i></button>
+                            </form>
+                        </div>
+
+                        <!-- Room Members Tab -->
+                        <div id="room-members-panel" class="room-panel">
+                            <h3>Room Members</h3>
+                            <div id="room-members-list" class="room-members-list">
+                                <!-- Dynamic members list -->
+                            </div>
+                        </div>
+
+                        <!-- Room Games Tab -->
+                        <div id="room-games-panel" class="room-panel">
+                            <h3>Multiplayer Games</h3>
+                            <p class="games-subtitle">Play synced with room members!</p>
+                            
+                            <div class="room-games-selectors">
+                                <button id="room-play-ttt" class="btn game-btn btn-full"><i class="fa-solid fa-circle-xmark"></i> Tic-Tac-Toe Sync</button>
+                                <button id="room-play-sudoku" class="btn game-btn btn-full"><i class="fa-solid fa-border-all"></i> Sudoku Co-op</button>
+                            </div>
+
+                            <!-- Game Workspace Inside Room -->
+                            <div id="room-game-workspace" class="room-game-workspace hidden">
+                                <div class="game-workspace-header">
+                                    <h4 id="room-game-name">Tic-Tac-Toe</h4>
+                                    <button id="close-room-game" class="icon-btn"><i class="fa-solid fa-xmark"></i></button>
+                                </div>
+                                <div id="room-game-body" class="room-game-body">
+                                    <!-- Dynamic board rendering -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- ========================================== -->
+    <!--            WEBRTC CALL OVERLAYS            -->
+    <!-- ========================================== -->
+
+    <!-- Call Overlay: Incoming Call Modal -->
+    <div id="incoming-call-overlay" class="incoming-call-overlay glass hidden">
+        <div class="incoming-call-card">
+            <div class="caller-avatar">
+                <img id="incoming-caller-avatar" src="https://api.dicebear.com/7.x/adventurer/svg" alt="Avatar">
+            </div>
+            <h3 id="incoming-caller-name">Alice Mercer</h3>
+            <p id="incoming-call-type"><i class="fa-solid fa-video text-glow"></i> Incoming Video Call...</p>
+            <div class="call-actions">
+                <button id="accept-call-btn" class="btn call-accept-btn"><i class="fa-solid fa-phone"></i> Accept</button>
+                <button id="decline-call-btn" class="btn call-decline-btn"><i class="fa-solid fa-phone-slash"></i> Decline</button>
+            </div>
+        </div>
+        <!-- Ringtone Audio Element -->
+        <audio id="ringtone-player" loop src="https://assets.mixkit.co/active_storage/sfx/2324/2324-84.wav" preload="auto"></audio>
+    </div>
+
+    <!-- Call Overlay: Active Call Floating Windows -->
+    <div id="active-call-grid" class="active-call-grid hidden">
+        <!-- Floating/Draggable Video Grid Container -->
+        <div class="call-window-header">
+            <span><i class="fa-solid fa-phone"></i> Active Call</span>
+            <span id="call-timer">00:00</span>
+        </div>
+        <div class="video-grid">
+            <!-- Remote Streams -->
+            <div id="remote-video-container" class="video-container">
+                <video id="remote-video" autoplay playsinline></video>
+                <span class="video-label" id="remote-video-label">Remote</span>
+                <div class="stream-indicators">
+                    <span id="remote-mic-off" class="indicator hidden"><i class="fa-solid fa-microphone-slash"></i></span>
+                    <span id="remote-cam-off" class="indicator hidden"><i class="fa-solid fa-video-slash"></i></span>
+                </div>
+            </div>
+            <!-- Local Stream -->
+            <div id="local-video-container" class="video-container local-stream">
+                <video id="local-video" autoplay playsinline muted></video>
+                <span class="video-label">You</span>
+                <div class="stream-indicators">
+                    <span id="local-mic-off" class="indicator hidden"><i class="fa-solid fa-microphone-slash"></i></span>
+                    <span id="local-cam-off" class="indicator hidden"><i class="fa-solid fa-video-slash"></i></span>
+                </div>
+            </div>
+        </div>
+        <!-- Call Controls toolbar -->
+        <div class="call-controls">
+            <button id="call-toggle-mic" class="call-control-btn active" title="Toggle Microphone"><i class="fa-solid fa-microphone"></i></button>
+            <button id="call-toggle-cam" class="call-control-btn active" title="Toggle Camera"><i class="fa-solid fa-video"></i></button>
+            <button id="call-hangup" class="call-control-btn hangup-btn" title="End Call"><i class="fa-solid fa-phone-slash"></i></button>
+        </div>
+    </div>
+
+    <!-- Watch Party Group WebRTC Video Panels (Float in the corner of Room View) -->
+    <div id="room-webrtc-container" class="room-webrtc-container hidden">
+        <div class="room-webrtc-header">
+            <span>Room Call</span>
+            <button id="room-leave-call" class="btn text-danger-btn sm-btn"><i class="fa-solid fa-phone-slash"></i> Disconnect</button>
+        </div>
+        <div id="room-streams-grid" class="room-streams-grid">
+            <!-- Dynamic grid of all group streams in room -->
+        </div>
+        <div class="room-webrtc-controls">
+            <button id="room-call-toggle-mic" class="btn room-control-btn" title="Toggle Mic"><i class="fa-solid fa-microphone"></i></button>
+            <button id="room-call-toggle-cam" class="btn room-control-btn" title="Toggle Camera"><i class="fa-solid fa-video"></i></button>
+        </div>
+    </div>
+
+    <!-- Script imports -->
+    <!-- Custom client app script modules -->
+    <script src="/js/app.js"></script>
+    <script src="/js/ui.js"></script>
+    <script src="/js/socket.js"></script>
+    <script src="/js/webrtc.js"></script>
+    <script src="/js/youtube.js"></script>
+    <script src="/js/games.js"></script>
+</body>
+</html>
