@@ -1,8 +1,11 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext';
 import { Link } from 'react-router-dom';
 import api from '../utils/api';
 import socket from '../socket';
+import Sudoku from '../components/Sudoku';
+import TicTacToeSolo from '../components/TicTacToeSolo';
 
 const statusColors = { online: '#22c55e', offline: '#64748b', busy: '#f59e0b' };
 const statusLabels = { online: 'Online', offline: 'Offline', busy: 'Busy' };
@@ -294,10 +297,12 @@ function Toast({ toasts }) {
 // ════════════════════════════════════════════════════════════════════════════
 const Dashboard = () => {
         const { user } = useAuth();
+        const { addNotification } = useNotification();
         const [friends, setFriends] = useState([]);
         const [requests, setRequests] = useState([]);
         const [activeTab, setActiveTab] = useState('all');
         const [toasts, setToasts] = useState([]);
+        const [soloGame, setSoloGame] = useState(null); // 'sudoku' | 'tictactoe' | null
 
         // DM
         const [dmFriend, setDmFriend] = useState(null);
@@ -335,11 +340,21 @@ const Dashboard = () => {
                     return exists ? prev : [...prev, data];
                 });
                 addToast('👥', 'Friend Request', (data.from && data.from.name ? data.from.name : 'Someone') + ' sent you a friend request');
+                addNotification({
+                    type: 'friend',
+                    text: `${data.from && data.from.name ? data.from.name : 'Someone'} sent you a friend request.`,
+                    icon: '👥'
+                });
             });
 
             // NEW: notification when your request was accepted
             socket.on('friend_request_was_accepted', ({ by }) => {
                 addToast('🎉', 'Request Accepted!', ((by && by.name) || 'Someone') + ' accepted your friend request');
+                addNotification({
+                    type: 'friend',
+                    text: `${(by && by.name) || 'Someone'} accepted your friend request!`,
+                    icon: '🎉'
+                });
                 fetchFriends();
             });
 
@@ -518,6 +533,12 @@ const Dashboard = () => {
                     )
                 }
 
+                { /* Solo Games */ } {
+                    soloGame === 'sudoku' && <Sudoku onClose={() => setSoloGame(null)} />
+                } {
+                    soloGame === 'tictactoe' && <TicTacToeSolo onClose={() => setSoloGame(null)} />
+                }
+
                 { /* Active call */ } {
                     activeCall && ( <
                         ActiveCallModal friend = { activeCall.friend }
@@ -573,6 +594,12 @@ const Dashboard = () => {
                     style = { S.sideNavItem } > < span > 🔍 < /span><span>Find Friends</span > < /Link> <
                         Link to = "/watch"
                     style = { S.sideNavItem } > < span > 📺 < /span><span>Watch Together</span > < /Link>
+                    <button onClick={() => setSoloGame('sudoku')} style={S.sideNavItemBtn}>
+                        <span>🧩</span><span>Sudoku (Solo)</span>
+                    </button>
+                    <button onClick={() => setSoloGame('tictactoe')} style={S.sideNavItemBtn}>
+                        <span>❌</span><span>Tic Tac Toe (Solo)</span>
+                    </button>
 
                     { /* Friend Requests */ } <
                     div style = {

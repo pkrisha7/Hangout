@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import socket from '../socket';
+import { useNotification } from '../context/NotificationContext';
 
 function getYouTubeId(url) {
     if (!url) return null;
@@ -278,6 +279,7 @@ function SudokuModal({ onClose, board, onCellChange }) {
     const mCard = { background: '#0f0f1a', padding: '28px 30px', borderRadius: 20, border: '1px solid #2a2a3a', textAlign: 'center' };
 
     function Room({ roomId, isHost, initialUrl, onLeave }) {
+        const { addNotification } = useNotification();
         const playerRef = useRef(null);
         const localStreamRef = useRef(null);
         const peerConns = useRef({});
@@ -303,8 +305,10 @@ function SudokuModal({ onClose, board, onCellChange }) {
 
         const playlistRef = useRef(playlist);
         const currentIndexRef = useRef(currentIndex);
+        const membersRef = useRef(members);
         useEffect(function() { playlistRef.current = playlist; }, [playlist]);
         useEffect(function() { currentIndexRef.current = currentIndex; }, [currentIndex]);
+        useEffect(function() { membersRef.current = members; }, [members]);
 
         const createPC = useCallback(function(remoteId) {
             if (peerConns.current[remoteId]) return peerConns.current[remoteId];
@@ -353,27 +357,65 @@ function SudokuModal({ onClose, board, onCellChange }) {
 
             socket.on('watch_member_joined', function(member) {
                 setMembers(function(prev) { return prev.filter(function(m) { return m.id !== member.id; }).concat([member]); });
+                addNotification({
+                    type: 'friend',
+                    text: `${member.name} joined the watch party!`,
+                    icon: '🚪'
+                });
             });
 
             socket.on('watch_member_left', function(data) {
                 var id = data.id;
+                const leftMember = membersRef.current.find(function(m) { return m.id === id; });
+                const name = leftMember ? leftMember.name : 'Someone';
                 setMembers(function(prev) { return prev.filter(function(m) { return m.id !== id; }); });
                 if (peerConns.current[id]) { peerConns.current[id].close();
                     delete peerConns.current[id]; }
                 setRemoteStreams(function(prev) { var n = Object.assign({}, prev);
                     delete n[id]; return n; });
+                addNotification({
+                    type: 'friend',
+                    text: `${name} left the watch party.`,
+                    icon: '🚪'
+                });
             });
 
-            socket.on('watch_playlist_updated', function(data) { setPlaylist(data.playlist); });
+            socket.on('watch_playlist_updated', function(data) { 
+                setPlaylist(data.playlist); 
+                addNotification({
+                    type: 'video',
+                    text: 'Playlist updated with new videos.',
+                    icon: '📋'
+                });
+            });
 
             socket.on('watch_video_changed', function(data) {
                 setVideoId(data.videoId);
                 setCurrentIndex(data.index !== undefined ? data.index : 0);
+                addNotification({
+                    type: 'video',
+                    text: `Video changed to ${data.videoId}.`,
+                    icon: '📺'
+                });
             });
 
             socket.on('ttt_update', function(data) {
                 setTttBoard(data.board);
                 setTttTurn(data.turn);
+                const isEmpty = data.board.every(function(cell) { return cell === null; });
+                if (isEmpty) {
+                    addNotification({
+                        type: 'game',
+                        text: 'Tic-Tac-Toe board reset!',
+                        icon: '🔄'
+                    });
+                } else {
+                    addNotification({
+                        type: 'game',
+                        text: 'Tic-Tac-Toe state updated.',
+                        icon: '❌'
+                    });
+                }
             });
 
             socket.on('sudoku_cell_updated', function(data) {
@@ -383,10 +425,20 @@ function SudokuModal({ onClose, board, onCellChange }) {
                     n[data.row][data.col] = data.value;
                     return n;
                 });
+                addNotification({
+                    type: 'game',
+                    text: 'Sudoku cell filled by a player.',
+                    icon: '🧩'
+                });
             });
 
             socket.on('sudoku_board_init', function(data) {
                 setSudokuBoard(data.board.map(function(r) { return r.slice(); }));
+                addNotification({
+                    type: 'game',
+                    text: 'Cooperative Sudoku board started!',
+                    icon: '🧩'
+                });
             });
 
             socket.on('watch_webrtc_offer', async function(data) {
